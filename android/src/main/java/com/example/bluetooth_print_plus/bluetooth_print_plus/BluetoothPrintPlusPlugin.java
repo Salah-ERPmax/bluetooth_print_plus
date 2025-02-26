@@ -2,8 +2,6 @@ package com.example.bluetooth_print_plus.bluetooth_print_plus;
 
 import static android.bluetooth.BluetoothDevice.DEVICE_TYPE_LE;
 
-import static androidx.core.app.ActivityCompat.startActivityForResult;
-
 import android.Manifest;
 import android.app.Activity;
 import android.app.Application;
@@ -14,11 +12,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
-import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
-
-import androidx.annotation.RequiresApi;
 
 import com.example.bluetooth_print_plus.bluetooth_print_plus.payload.BPPState;
 import com.example.bluetooth_print_plus.bluetooth_print_plus.payload.BluetoothParameter;
@@ -45,6 +40,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ExecutionException;
 
 /**
  * BluetoothPrintPlusPlugin
@@ -178,8 +174,7 @@ public class BluetoothPrintPlusPlugin
         assert args != null;
         final String address = (String) args.get("address");
         stopScan();
-        connect(address);
-        result.success(null);
+        connect(address, result);
         break;
       case "disconnect":
         Printer.close();
@@ -295,7 +290,7 @@ public class BluetoothPrintPlusPlugin
     mBluetoothAdapter.cancelDiscovery();
   }
 
-  public void connect(final String mac) {
+  public void connect(final String mac, Result result) {
     ThreadPoolManager.getInstance().addTask(new Runnable() {
       @Override
       public void run() {
@@ -323,7 +318,7 @@ public class BluetoothPrintPlusPlugin
                     @Override
                     public void onSuccess(PrinterDevices printerDevices) {
                       // LogUtils.d(TAG, "onSuccess");
-                      sink.success(BPPState.DeviceConnected.getValue());
+                      if(sink != null) sink.success(BPPState.DeviceConnected.getValue());
                     }
 
                     @Override
@@ -341,11 +336,18 @@ public class BluetoothPrintPlusPlugin
                     @Override
                     public void onDisconnect() {
                       // LogUtils.d(TAG, "onDisconnect");
-                      sink.success(BPPState.DeviceDisconnected.getValue());
+                      if(sink != null) sink.success(BPPState.DeviceDisconnected.getValue());
                     }
                   })
                   .build();
-          Printer.connect(blueTooth);
+          ;
+            try {
+                boolean res = Printer.connect(blueTooth).get();
+                System.out.println("this is ress" + res);
+                result.success(res);
+            } catch (InterruptedException | ExecutionException e) {
+              e.printStackTrace();
+            }
         }
       }
     });
@@ -384,10 +386,10 @@ public class BluetoothPrintPlusPlugin
           int blueState = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, 0);
           switch (blueState) {
             case BluetoothAdapter.STATE_ON:
-              sink.success(BPPState.BlueOn.getValue());
+              if(sink != null) sink.success(BPPState.BlueOn.getValue());
               break;
             case BluetoothAdapter.STATE_OFF:
-              sink.success(BPPState.BlueOff.getValue());
+              if(sink != null) sink.success(BPPState.BlueOff.getValue());
               break;
           }
         }

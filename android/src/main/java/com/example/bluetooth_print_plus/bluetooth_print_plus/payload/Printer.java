@@ -1,4 +1,5 @@
 package com.example.bluetooth_print_plus.bluetooth_print_plus.payload;
+import java.util.concurrent.*;
 
 import com.gprinter.bean.PrinterDevices;
 import com.gprinter.io.BluetoothPort;
@@ -55,42 +56,47 @@ public class Printer {
      * 连接
      * @param devices
      */
-    public static void connect(final PrinterDevices devices){
-        ThreadPoolManager.getInstance().addTask(new Runnable() {
+    public static Future<Boolean> connect(final PrinterDevices devices) {
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        return executor.submit(new Callable<Boolean>() {
             @Override
-            public void run() {
-                         if (portManager!=null) {//先close上次连接
-                             portManager.closePort();
-                             try {
-                                  Thread.sleep(2000);
-                             } catch (InterruptedException e) {
-                             }
-                         }
-                         if (devices!=null) {
-                           switch (devices.getConnMethod()) {
-                               case BLUETOOTH://蓝牙
-                                   portManager = new BluetoothPort(devices);
-                                   portManager.openPort();
-                                   break;
-                               case USB://USB
-                                   portManager = new UsbPort(devices);
-                                   portManager.openPort();
-                                   break;
-                               case WIFI://WIFI
-                                   portManager = new EthernetPort(devices);
-                                   portManager.openPort();
-                                   break;
-                               case SERIALPORT://串口
-                                   portManager=new SerialPort(devices);
-                                   portManager.openPort();
-                                   break;
-                               default:
-                                   break;
-                           }
-                       }
-
+            public Boolean call() {
+                boolean result = false;
+                if (portManager != null) { // Close previous connection
+                    portManager.closePort();
+                    try {
+                        Thread.sleep(2000);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    }
                 }
-            });
+
+                if (devices != null) {
+                    switch (devices.getConnMethod()) {
+                        case BLUETOOTH: // Bluetooth
+                            portManager = new BluetoothPort(devices);
+                            result = portManager.openPort();
+                            break;
+                        case USB: // USB
+                            portManager = new UsbPort(devices);
+                            result = portManager.openPort();
+                            break;
+                        case WIFI: // WIFI
+                            portManager = new EthernetPort(devices);
+                            result = portManager.openPort();
+                            break;
+                        case SERIALPORT: // Serial Port
+                            portManager = new SerialPort(devices);
+                            result = portManager.openPort();
+                            break;
+                        default:
+                            result = false;
+                            break;
+                    }
+                }
+                return result;
+            }
+        });
     }
     /**
      * 发送数据到打印机 字节数据

@@ -121,8 +121,9 @@ class BluetoothPrintPlus {
   ///
   /// The `connect` method returns immediately, and the connection status
   /// is reported on the `connectState` stream.
-  static Future<dynamic> connect(BluetoothDevice device) async {
-    await _methodChannel.invokeMethod('connect', device.toJson());
+  static Future<bool> connect(BluetoothDevice device) async {
+    dynamic d = await _methodChannel.invokeMethod('connect', device.toJson());
+    return (d is bool) ? d : false;
   }
 
   /// Disconnects from the currently connected Bluetooth device.
