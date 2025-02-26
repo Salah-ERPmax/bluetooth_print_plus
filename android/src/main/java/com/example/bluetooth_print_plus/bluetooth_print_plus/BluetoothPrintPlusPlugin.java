@@ -340,10 +340,8 @@ public class BluetoothPrintPlusPlugin
                     }
                   })
                   .build();
-          ;
             try {
                 boolean res = Printer.connect(blueTooth).get();
-                System.out.println("this is ress" + res);
                 result.success(res);
             } catch (InterruptedException | ExecutionException e) {
               e.printStackTrace();
